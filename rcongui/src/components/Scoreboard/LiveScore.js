@@ -130,6 +130,49 @@ const LiveGameScore = ({ classes }) => (
   />
 );
 
+const analyzeScores = (oldScores, newScores) => {
+  if (!oldScores) {
+    return;
+  }
+
+  newScores.forEach((player) => {
+    const oldPlayer = oldScores.find(
+      (item) => item.steam_id_64 === player.steam_id_64
+    );
+
+    if (!oldPlayer) {
+      console.log(`%c${player.player}%c joined the match`, "color: green", "");
+    }
+
+    // This should never be more than 1 but who knows what craziness can happen. When it does, just make it apparent by outputting all matched weapons
+    const deathByWeapons = Object.keys(player.death_by_weapons).filter(
+      (weapon) =>
+        player.death_by_weapons[weapon] !== oldPlayer?.death_by_weapons[weapon]
+    );
+
+    Object.entries(player.death_by).forEach(([killerName, count]) => {
+      if (oldPlayer?.death_by[killerName] !== count) {
+        console.log(
+          `%c${
+            player.player
+          }%c was killed by %c${killerName}%c with a %c${deathByWeapons.join(
+            " OR "
+          )}`,
+          "color: red",
+          "",
+          "color: red",
+          "",
+          "color: red"
+        );
+      }
+    });
+
+    // if (oldPlayer?.last_spawn !== player.last_spawn) {
+    //   console.log(`%c${player.player}%c spawned`, "color: lime", "");
+    // }
+  });
+};
+
 const LiveScore = ({ classes, endpoint, explainText, title }) => {
   const styles = useStyles();
   const [stats, setStats] = React.useState(new iList());
@@ -151,7 +194,13 @@ const LiveScore = ({ classes, endpoint, explainText, title }) => {
       .then((res) => showResponse(res, endpoint, false))
       .then((data) => {
         const map_ = fromJS(data.result || new iList());
-        setStats(map_);
+        setStats((oldValue) => {
+          analyzeScores(
+            oldValue.get("stats")?.toJS(),
+            map_.get("stats").toJS()
+          );
+          return map_;
+        });
         setRefreshIntervalSec(map_.get("refresh_interval_sec", 10));
         // TODO add code to sync the refresh time with one of the server by checking the last refresh timestamp
       })
