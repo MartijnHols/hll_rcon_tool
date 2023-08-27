@@ -25,8 +25,8 @@ import { pure } from "recompose";
 import { PlayerStatProfile } from "./PlayerStatProfile";
 import MUIDataTable from "mui-datatables";
 import { Button } from "@material-ui/core";
-import { fromJS } from "immutable";
 import { toPairs, sortBy } from "lodash";
+import BalanceBar from "./BalanceBar";
 
 export const safeGetSteamProfile = (scoreObj) =>
   scoreObj.get("steaminfo")
@@ -39,8 +39,10 @@ const PlayerItem = pure(({ score, rank, postProcess, statKey, onClick }) => {
   const steamProfile = safeGetSteamProfile(score);
   const avatarUrl = steamProfile ? steamProfile.get("avatar", null) : null;
 
+  const analysis = analyzePlayer(score.toJS());
+
   return (
-    <React.Fragment>
+    <>
       <Divider variant="middle" component="li" />
       <ListItem button onClick={onClick}>
         <ListItemAvatar>
@@ -54,7 +56,11 @@ const PlayerItem = pure(({ score, rank, postProcess, statKey, onClick }) => {
               `<missing_profile> ID: ${score.get("player_id")}`
             )
           }
-          secondary={`#${rank}`}
+          secondary={`#${rank} - ${
+            analysis
+              ? `${Math.round(analysis.percentageAxis * 100)}% Nazi`
+              : "Unknown"
+          }`}
         />
         <ListItemSecondaryAction>
           <Typography variant="h6" color="secondary">
@@ -62,7 +68,7 @@ const PlayerItem = pure(({ score, rank, postProcess, statKey, onClick }) => {
           </Typography>
         </ListItemSecondaryAction>
       </ListItem>
-    </React.Fragment>
+    </>
   );
 });
 
@@ -123,9 +129,7 @@ const TopList = pure(
               statKey={statKey}
               onClick={() => onPlayerClick(s)}
             />
-          ) : (
-            ""
-          )
+          ) : null
         )}
         <ListItem>
           <ListItemAvatar style={{ visibility: "hidden" }}>
@@ -156,8 +160,8 @@ const RankBoard = pure(
     onPlayerClick,
     playersFilter,
   }) => (
-    <React.Fragment>
-      <AppBar position="relative" style={{ minHeight: "144px" }}>
+    <>
+      <AppBar position="relative" style={{ minHeight: 144 }}>
         <Toolbar style={{ minHeight: "inherit" }}>
           <Typography
             variant="h2"
@@ -181,7 +185,7 @@ const RankBoard = pure(
           playersFilter={playersFilter}
         />
       </Paper>
-    </React.Fragment>
+    </>
   )
 );
 
@@ -345,10 +349,180 @@ function commaSeperatedListRenderer(value) {
     .map((v) => `${v[0]}: ${v[1]}`)
     .join(", ");
 }
+const unknownWeapons = [
+  "UNKNOWN",
+  "SATCHEL",
+  "Satchel", // Only saw this in a match with the British - might be the British name?
+  "BOMBING RUN",
+  "STRAFING RUN",
+  "PRECISION STRIKE",
+  // I think when vehicles blow up, this is the weapon that claims the kill
+  "Opel Blitz (Transport)",
+  "Opel Blitz (Supply)",
+  "Sd.Kfz.161 Panzer IV",
+  "Sd.Kfz.171 Panther",
+  "Sd.Kfz.181 Tiger 1",
+  "Sd.Kfz.234 Puma",
+  "Sd.Kfz.121 Luchs",
+  "Sd.Kfz 251 Half-track",
+  "Kubelwagen",
+  "GMC CCKW 353 (Transport)",
+  "GMC CCKW 353 (Supply)",
+  "Stuart M5A1",
+  "Sherman M4A3(75)W",
+  "Sherman M4A3E2(76)",
+];
+const isUnknownWeapon = (weapon) => unknownWeapons.includes(weapon);
+const artilleryWeapons = ["150MM HOWITZER [sFH 18]", "155MM HOWITZER [M114]"];
+const isArtilleryWeapon = (weapon) => artilleryWeapons.includes(weapon);
+const tankWeapons = [
+  // Germany
+  "COAXIAL MG34 [Sd.Kfz.171 Panther]",
+  "HULL MG34 [Sd.Kfz.171 Panther]", // hull is driving over someone I reckon
+  "75MM CANNON [Sd.Kfz.171 Panther]",
+  // Tiger
+  "COAXIAL MG34 [Sd.Kfz.181 Tiger 1]",
+  "HULL MG34 [Sd.Kfz.181 Tiger 1]",
+  "88 KWK 36 L/56 [Sd.Kfz.181 Tiger 1]",
+  // Panzer IV
+  "COAXIAL MG34 [Sd.Kfz.161 Panzer IV]",
+  "HULL MG34 [Sd.Kfz.161 Panzer IV]",
+  "75MM CANNON [Sd.Kfz.161 Panzer IV]",
+  // Puma
+  "COAXIAL MG34 [Sd.Kfz.234 Puma]",
+  "50mm KwK 39/1 [Sd.Kfz.234 Puma]",
+  // Luchs
+  "COAXIAL MG34 [Sd.Kfz.121 Luchs]",
+  "20MM KWK 30 [Sd.Kfz.121 Luchs]",
+  // unidentified tanks
+  "HULL MG34",
+  "COAXIAL MG34",
+  // US
+  // Greyhound
+  "COAXIAL M1919 [M8 Greyhound]",
+  "M6 37mm [M8 Greyhound]",
+  // Stuart
+  "COAXIAL M1919 [Stuart M5A1]",
+  "37MM CANNON [Stuart M5A1]",
+  "HULL M1919 [Stuart M5A1]",
+  // 75
+  "COAXIAL M1919 [Sherman M4A3(75)W]",
+  "75MM CANNON [Sherman M4A3(75)W]",
+  "HULL M1919 [Sherman M4A3(75)W]",
+  // 76
+  "COAXIAL M1919 [Sherman M4A3E2(76)]",
+  "HULL M1919 [Sherman M4A3E2(76)]",
+  "76MM M1 GUN [Sherman M4A3E2(76)]",
+];
+const isTankWeapon = (weapon) => tankWeapons.includes(weapon);
+const germanWeapons = [
+  "KARABINER 98K",
+  "MP40",
+  "STG44",
+  "GEWEHR 43",
+  "M43 STIELHANDGRANATE",
+  "M24 STIELHANDGRANATE",
+  "MG42",
+  "MG 42", // this alternative spelling is used in the game, no idea why/when
+  "M1A1 AT MINE",
+  "150MM HOWITZER [sFH 18]",
+  "FG42 x4",
+  "WALTHER P38",
+  "KARABINER 98K x8",
+  "FLAMMENWERFER 41",
+  "PANZERSCHRECK",
+  "FG42",
+  "MG34",
+  "S-MINE", // TODO: verify whether the US AP mine isn't also listed as S-MINE kill
+  "LUGER P08",
+  "TELLERMINE 43",
+  // Panther
+  "COAXIAL MG34 [Sd.Kfz.171 Panther]",
+  "HULL MG34 [Sd.Kfz.171 Panther]",
+  "75MM CANNON [Sd.Kfz.171 Panther]",
+  // Tiger
+  "COAXIAL MG34 [Sd.Kfz.181 Tiger 1]",
+  "HULL MG34 [Sd.Kfz.181 Tiger 1]",
+  "88 KWK 36 L/56 [Sd.Kfz.181 Tiger 1]",
+  // Panzer IV
+  "COAXIAL MG34 [Sd.Kfz.161 Panzer IV]",
+  "HULL MG34 [Sd.Kfz.161 Panzer IV]",
+  "75MM CANNON [Sd.Kfz.161 Panzer IV]",
+  // Lunchs
+  "COAXIAL MG34 [Sd.Kfz.121 Luchs]",
+  "20MM KWK 30 [Sd.Kfz.121 Luchs]",
+  // Puma
+  "COAXIAL MG34 [Sd.Kfz.234 Puma]",
+  "50mm KwK 39/1 [Sd.Kfz.234 Puma]",
+  "COAXIAL MG34", // unidentified tanks
+  "75MM CANNON [PAK 40]", // AT gun
+  "FELDSPATEN", // melee
+  "Sd.Kfz 251 Half-track", // halftrack driving over someone
+  "MG 42 [Sd.Kfz 251 Half-track]", // halftrack mg
+  "HULL MG34", // no idea what tank this is
+];
+const isGermanWeapon = (weapon) => germanWeapons.includes(weapon);
+const not = (func) => (value) => !func(value);
+export const analyzeWeapons = (weapons) => {
+  const totalKills = Object.values(weapons).reduce(
+    (sum, count) => sum + count,
+    0
+  );
+  if (totalKills === 0) {
+    return null;
+  }
+
+  const unknownKills = Object.keys(weapons)
+    .filter(isUnknownWeapon)
+    .reduce((sum, weapon) => sum + weapons[weapon], 0);
+  const germanKills = Object.keys(weapons)
+    .filter(isGermanWeapon)
+    .reduce((sum, weapon) => sum + weapons[weapon], 0);
+
+  const percentageAxis = germanKills / (totalKills - unknownKills);
+
+  return {
+    percentageAxis,
+    certainty: 1 - unknownKills / totalKills,
+    hasSwitchedTeams: totalKills - unknownKills < germanKills,
+  };
+};
+export const analyzePlayer = (player) => {
+  const killsAnalysis = analyzeWeapons(player.weapons);
+  const deathsAnalysis = analyzeWeapons(player.death_by_weapons);
+
+  if (killsAnalysis && deathsAnalysis) {
+    return {
+      percentageAxis:
+        (killsAnalysis.percentageAxis + 1 - deathsAnalysis.percentageAxis) / 2,
+      certainty: (killsAnalysis.certainty + deathsAnalysis.certainty) / 2,
+      hasSwitchedTeams:
+        killsAnalysis.hasSwitchedTeams || deathsAnalysis.hasSwitchedTeams,
+    };
+  }
+
+  if (killsAnalysis) {
+    return {
+      percentageAxis: killsAnalysis.percentageAxis,
+      certainty: killsAnalysis.certainty,
+      hasSwitchedTeams: killsAnalysis.hasSwitchedTeams,
+    };
+  }
+  if (deathsAnalysis) {
+    return {
+      percentageAxis: 1 - deathsAnalysis.percentageAxis,
+      certainty: deathsAnalysis.certainty,
+      hasSwitchedTeams: deathsAnalysis.hasSwitchedTeams,
+    };
+  }
+
+  return null;
+};
 
 const Scores = pure(({ classes, scores, durationToHour, type }) => {
   const [highlight, setHighlight] = React.useState(null);
   const doHighlight = (playerScore) => {
+    console.log(playerScore.toJS())
     setHighlight(playerScore);
     window.scrollTo(0, 0);
   };
@@ -356,13 +530,105 @@ const Scores = pure(({ classes, scores, durationToHour, type }) => {
   const undoHighlight = () => setHighlight(null);
   const styles = useStyles();
 
+  const totalKillsAxis = {
+    artillery: 0,
+    tank: 0,
+    infantry: 0,
+  };
+  const totalKillsAllies = {
+    artillery: 0,
+    tank: 0,
+    infantry: 0,
+  };
+
+  const debug = {};
+
+  scores?.toJS().forEach((player) => {
+    const analysis = analyzePlayer(player);
+    debug[player.player] = analysis;
+    if (!analysis) {
+      // console.log(item.player, "has no kills");
+      return;
+    }
+
+    const { percentageAxis } = analysis;
+    const weapons = Object.keys(player.weapons);
+
+    const sum = (sum, weapon) => sum + player.weapons[weapon];
+    totalKillsAxis.artillery +=
+      weapons.filter(isGermanWeapon).filter(isArtilleryWeapon).reduce(sum, 0) ||
+      0;
+    totalKillsAllies.artillery +=
+      weapons
+        .filter(not(isGermanWeapon))
+        .filter(isArtilleryWeapon)
+        .reduce(sum, 0) || 0;
+    totalKillsAxis.tank +=
+      weapons.filter(isGermanWeapon).filter(isTankWeapon).reduce(sum, 0) || 0;
+    totalKillsAllies.tank +=
+      weapons.filter(not(isGermanWeapon)).filter(isTankWeapon).reduce(sum, 0) ||
+      0;
+    totalKillsAxis.infantry +=
+      weapons.reduce((sum, weapon) => {
+        if (isArtilleryWeapon(weapon) || isTankWeapon(weapon)) {
+          return sum;
+        }
+        if (isUnknownWeapon(weapon)) {
+          return sum + Math.round(weapons[weapon] * percentageAxis);
+        }
+        if (!isGermanWeapon(weapon)) {
+          return sum;
+        }
+
+        return sum + player.weapons[weapon];
+      }, 0) || 0;
+    totalKillsAllies.infantry +=
+      weapons.reduce((sum, weapon) => {
+        if (isArtilleryWeapon(weapon) || isTankWeapon(weapon)) {
+          return sum;
+        }
+        if (isUnknownWeapon(weapon)) {
+          return (
+            sum + Math.round(player.weapons[weapon] * (1 - percentageAxis))
+          );
+        }
+        if (isGermanWeapon(weapon)) {
+          return sum;
+        }
+
+        return sum + player.weapons[weapon];
+      }, 0) || 0;
+  });
+
+  // console.log({ totalKillsAxis, totalKillsAllies });
+
+  // console.log(debug);
+  // console.log(
+  //   "These should be non German weapons:",
+  //   Object.keys(
+  //     scores
+  //       ?.toJS()
+  //       .map((item) => Object.keys(item.weapons))
+  //       .flat()
+  //       .reduce((obj, weapon) => {
+  //         obj[weapon] = true;
+  //         return obj;
+  //       }, {})
+  //   )
+  //     .filter(not(isGermanWeapon))
+  //     .filter(not(isUnknownWeapon))
+  //     .filter(not(isTankWeapon))
+  //     .filter(not(isArtilleryWeapon))
+  // );
+
   return (
     <React.Fragment>
-      {highlight ? (
+      {highlight && (
         <PlayerStatProfile playerScore={highlight} onClose={undoHighlight} />
-      ) : (
-        ""
       )}
+
+      <BalanceBar axisKills={totalKillsAxis} alliesKills={totalKillsAllies} />
+
       {scores && scores.size ? (
         <React.Fragment>
           {process.env.REACT_APP_PUBLIC_BUILD ? (
