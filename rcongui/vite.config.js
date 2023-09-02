@@ -21,8 +21,8 @@ export default defineConfig(({command, mode}) => {
       }
     },
     esbuild: {
-      loader: "jsx",
-      include: /src\/.*\.jsx?$/,
+      loader: "tsx",
+      include: /src\/.*\.(js|jsx|ts|tsx)$/,
       exclude: [],
     },
     optimizeDeps: {
