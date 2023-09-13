@@ -22,6 +22,7 @@ export enum WeaponType {
   Truck = "TRUCK",
   AntiTankGun = "ANTI_TANK_GUN",
   Artillery = "ARTILLERY",
+  CommanderAbility = "COMMANDER_ABILITY",
   Unknown = "UNKNOWN",
 }
 
