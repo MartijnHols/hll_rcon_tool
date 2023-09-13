@@ -40,19 +40,19 @@ const weapons: Weapon[] = [
     name: "BOMBING RUN",
     humanName: "Bombing Run",
     team: Team.Unknown,
-    type: WeaponType.Unknown,
+    type: WeaponType.CommanderAbility,
   },
   {
     name: "STRAFING RUN",
     humanName: "Strafing Run",
     team: Team.Unknown,
-    type: WeaponType.Unknown,
+    type: WeaponType.CommanderAbility,
   },
   {
     name: "PRECISION STRIKE",
     humanName: "Precision Strike",
     team: Team.Unknown,
-    type: WeaponType.Unknown,
+    type: WeaponType.CommanderAbility,
   },
 ];
 

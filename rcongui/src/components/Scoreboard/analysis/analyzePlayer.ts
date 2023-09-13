@@ -1,5 +1,5 @@
 import weapons from "../weapons";
-import { Team, Weapon, WeaponId } from "../weapons/schema";
+import { Team, Weapon, WeaponId, WeaponType } from "../weapons/schema";
 
 type WeaponKills = Record<WeaponId, number>;
 interface Player {
@@ -24,7 +24,9 @@ export const analyzeWeapons = (weapons: WeaponKills) => {
   const unknownKills = Object.keys(weapons)
     .filter(
       (id: WeaponId) =>
-        !weaponsById[id] || weaponsById[id]?.isUnreliableKillAttribution
+        !weaponsById[id] ||
+        weaponsById[id].isUnreliableKillAttribution ||
+        weaponsById[id].team === Team.Unknown
     )
     .reduce((sum, weapon) => sum + weapons[weapon], 0);
   const confirmedGermanKills = Object.keys(weapons)
@@ -78,6 +80,12 @@ const analyzePlayer = (player: Player) => {
       hasSwitchedTeams: deathsAnalysis.hasSwitchedTeams,
     };
   }
+
+  return {
+    percentageAxis: 0,
+    certainty: 0,
+    hasSwitchedTeams: false,
+  };
 
   return null;
 };

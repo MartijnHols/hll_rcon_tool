@@ -382,7 +382,7 @@ function commaSeperatedListRenderer(value) {
 
 const weaponInfo = (weapon) => weapons.find((item) => item.name === weapon);
 const isUnreliableKillAttribution = (weapon) =>
-  weaponInfo(weapon)?.isUnreliableKillAttribution;
+  weaponInfo(weapon)?.isUnreliableKillAttribution || weaponInfo(weapon)?.team === Team.Unknown;
 const isArtilleryWeapon = (weapon) =>
   weaponInfo(weapon)?.type === WeaponType.Artillery;
 const isTankWeapon = (weapon) => weaponInfo(weapon)?.type === WeaponType.Tank;
@@ -391,15 +391,22 @@ const not = (func) => (value) => !func(value);
 
 const reportWeapons = (player) => {
   console.log("weapons", {
-    axis: Object.keys(player.weapons).filter(isGermanWeapon),
-    allies: Object.keys(player.weapons).filter(not(isGermanWeapon)),
+    kills: {
+      axis: Object.keys(player.weapons).filter(isGermanWeapon),
+      allies: Object.keys(player.weapons).filter(not(isGermanWeapon)),
+    },
+    deaths: {
+      axis: Object.keys(player.death_by_weapons).filter(isGermanWeapon),
+      allies: Object.keys(player.death_by_weapons).filter(not(isGermanWeapon)),
+    },
   });
 };
 
 const Scores = pure(({ classes, scores, durationToHour, type }) => {
   const [highlight, setHighlight] = React.useState(null);
   const doHighlight = (playerScore) => {
-    console.log(playerScore.toJS(), reportWeapons(playerScore.toJS()));
+    console.log(playerScore.toJS());
+    reportWeapons(playerScore.toJS());
     setHighlight(playerScore);
     window.scrollTo(0, 0);
   };
@@ -480,6 +487,47 @@ const Scores = pure(({ classes, scores, durationToHour, type }) => {
 
   // console.log(debug);
   window.weaponsReport = () => {
+    console.log(
+      "Total kills:",
+      scores
+        ?.toJS()
+        .map((item) => Object.values(item.weapons))
+        .flat()
+        .reduce((sum, kills) => sum + kills, 0),
+      "Total pure allies players:",
+      scores?.toJS().filter((player) => {
+        const analysis = analyzePlayer(player);
+
+        return analysis && analysis.percentageAxis === 0;
+      }).length,
+      "Total pure axis players:",
+      scores?.toJS().filter((player) => {
+        const analysis = analyzePlayer(player);
+
+        return analysis && analysis.percentageAxis === 1;
+      }).length,
+      "Split team players:",
+      scores?.toJS().filter((player) => {
+        const analysis = analyzePlayer(player);
+
+        return analysis && analysis.percentageAxis !== 0 && analysis.percentageAxis !== 1;
+      }).length,
+      "Unknown players:",
+      scores?.toJS().filter((player) => {
+        const analysis = analyzePlayer(player);
+
+        return !analysis;
+      })
+    );
+    console.table(scores?.toJS().map(player => {
+      const analysis = analyzePlayer(player);
+
+      return {
+        name: player.player,
+        percentageAxis: analysis?.percentageAxis,
+        kills: Object.values(player.weapons).reduce((sum, kills) => sum + kills, 0),
+      }
+    }))
     console.log(
       "Unknown weapons:",
       Object.keys(
