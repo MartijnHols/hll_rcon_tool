@@ -12,6 +12,23 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
     alliesKills.artillery + alliesKills.tank + alliesKills.infantry;
   const totalKillsAll = totalAxisKills + totalAlliesKills;
 
+  const differencePercentage = (difference) =>
+    `${difference > 0 ? "+" : ""}${Math.round(difference * 100)}%`;
+
+  // I calculated it this way because I wanted the real difference in strength
+  // between the two teams to be clearer as the bars can make it appear smaller
+  // than it is. By using the minimum of the two teams as the denominator, the 
+  // difference is more pronounced, showing more clearly how many more kills one
+  // team has than the other relatively. This matches what you would see if you
+  // put the bars underneath each other; the bigger bar would be the difference
+  // calculated below-bigger than the smaller bar.
+  const axisDifference =
+    (totalAxisKills - totalAlliesKills) /
+    Math.min(totalAxisKills, totalAlliesKills);
+  const alliesDifference =
+    (totalAlliesKills - totalAxisKills) /
+    Math.min(totalAxisKills, totalAlliesKills);
+
   return (
     <div
       style={{
@@ -91,7 +108,11 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
               Infantry ({axisKills.infantry})
             </div>
           </div>
-          <div>Axis ({totalAxisKills})</div>
+          <div>
+            Axis ({totalAxisKills} /{" "}
+            {(totalAxisKills / totalAlliesKills).toFixed(2)} KD /{" "}
+            {differencePercentage(axisDifference)})
+          </div>
         </div>
         <div
           style={{
@@ -131,7 +152,11 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
               Artillery ({alliesKills.artillery})
             </div>
           </div>
-          <div>Allies ({totalAlliesKills})</div>
+          <div>
+            Allies ({totalAlliesKills} /{" "}
+            {(totalAlliesKills / totalAxisKills).toFixed(2)} KD /{" "}
+            {differencePercentage(alliesDifference)})
+          </div>
         </div>
       </div>
     </div>
