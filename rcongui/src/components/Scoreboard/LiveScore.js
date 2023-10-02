@@ -20,6 +20,11 @@ import Scores from "./Scores";
 import { getMapImageUrl } from "./utils";
 import { fade } from "@material-ui/core/styles/colorManipulator";
 import { Link as RouterLink } from "react-router-dom";
+import analyzePlayer, {
+  analyzeWeapons,
+  isAxisWeapon,
+  isUnknownWeapon,
+} from "./analysis/analyzePlayer";
 
 const useStyles = makeStyles((theme) => ({
   padRight: {
@@ -149,27 +154,31 @@ const analyzeScores = (oldScores, newScores) => {
       (weapon) =>
         player.death_by_weapons[weapon] !== oldPlayer?.death_by_weapons[weapon]
     );
+    const isUnknown = deathByWeapons.every((weapon) => isUnknownWeapon(weapon));
+    const isAxis = deathByWeapons.every((weapon) => isAxisWeapon(weapon));
 
     Object.entries(player.death_by).forEach(([killerName, count]) => {
       if (oldPlayer?.death_by[killerName] !== count) {
         console.log(
-          `%c${
+          `%c${killerName}%c killed %c${
             player.player
-          }%c was killed by %c${killerName}%c with a %c${deathByWeapons.join(
-            " OR "
-          )}`,
-          "color: red",
+          }%c with a %c${deathByWeapons.join(" OR ")}`,
+          isUnknown
+            ? "color: grey"
+            : isAxis
+            ? "color: red"
+            : "color: lightblue",
           "",
-          "color: red",
+          isUnknown
+            ? "color: grey"
+            : !isAxis
+            ? "color: red"
+            : "color: lightblue",
           "",
           "color: red"
         );
       }
     });
-
-    // if (oldPlayer?.last_spawn !== player.last_spawn) {
-    //   console.log(`%c${player.player}%c spawned`, "color: lime", "");
-    // }
   });
 };
 

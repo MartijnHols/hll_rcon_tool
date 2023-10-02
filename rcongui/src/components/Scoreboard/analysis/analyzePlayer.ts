@@ -12,6 +12,19 @@ const weaponsById = weapons.reduce((map, weapon) => {
   return map;
 }, {} as Record<WeaponId, Weapon>);
 
+export const isUnknownWeapon = (id: WeaponId) =>
+  !weaponsById[id] ||
+  weaponsById[id].isUnreliableKillAttribution ||
+  weaponsById[id].team === Team.Unknown;
+export const isAxisWeapon = (id: WeaponId) => {
+  const weapon = weaponsById[id];
+
+  return (
+    weapon &&
+    weapon.team === Team.Germany &&
+    !weapon.isUnreliableKillAttribution
+  );
+};
 export const analyzeWeapons = (weapons: WeaponKills) => {
   const totalKills = Object.values(weapons).reduce(
     (sum, count) => sum + count,
@@ -22,23 +35,10 @@ export const analyzeWeapons = (weapons: WeaponKills) => {
   }
 
   const unknownKills = Object.keys(weapons)
-    .filter(
-      (id: WeaponId) =>
-        !weaponsById[id] ||
-        weaponsById[id].isUnreliableKillAttribution ||
-        weaponsById[id].team === Team.Unknown
-    )
+    .filter(isUnknownWeapon)
     .reduce((sum, weapon) => sum + weapons[weapon], 0);
   const confirmedGermanKills = Object.keys(weapons)
-    .filter((id: WeaponId) => {
-      const weapon = weaponsById[id];
-
-      return (
-        weapon &&
-        weapon.team === Team.Germany &&
-        !weapon.isUnreliableKillAttribution
-      );
-    })
+    .filter(isAxisWeapon)
     .reduce((sum, weapon) => sum + weapons[weapon], 0);
   if (!confirmedGermanKills) {
     return null;
