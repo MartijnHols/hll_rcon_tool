@@ -53,8 +53,9 @@ export const analyzeWeapons = (weapons: WeaponKills) => {
   };
 };
 const analyzePlayer = (player: Player) => {
-  const killsAnalysis = analyzeWeapons(player.weapons);
-  const deathsAnalysis = analyzeWeapons(player.death_by_weapons);
+  const killsAnalysis = player.weapons && analyzeWeapons(player.weapons);
+  const deathsAnalysis =
+    player.death_by_weapons && analyzeWeapons(player.death_by_weapons);
 
   if (killsAnalysis && deathsAnalysis) {
     return {
