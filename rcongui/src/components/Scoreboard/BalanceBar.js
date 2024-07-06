@@ -1,3 +1,6 @@
+import { List as iList } from "immutable";
+import analyzePlayer, {isAxisWeapon, isTankWeapon, isArtilleryWeapon, isUnreliableKillAttribution, not} from "./analysis/analyzePlayer";
+
 const artilleryColor = "red";
 const tanksColor = "brown";
 const axisInfantryColor = "#de6069";
@@ -5,7 +8,15 @@ const alliesInfantryColor = "#346888";
 export const axisColor = "red";
 export const alliesColor = "blue";
 
-const BalanceBar = ({ axisKills, alliesKills }) => {
+const teamIconStyle = { height: "1.2em", verticalAlign: "middle" };
+const GermanyIcon = () => (
+  <img src="icons/germany.webp" style={teamIconStyle} />
+);
+const UnitedStatesIcon = () => (
+  <img src="icons/unitedstates.webp" style={teamIconStyle} />
+);
+
+const BalanceBar = ({ axisKills, alliesKills, scores, setPlayersFilter }) => {
   const totalAxisKills =
     axisKills.artillery + axisKills.tank + axisKills.infantry;
   const totalAlliesKills =
@@ -28,6 +39,19 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
   const alliesDifference =
     (totalAlliesKills - totalAxisKills) /
     Math.min(totalAxisKills, totalAlliesKills);
+
+  // scores.filter()
+
+  const findPlayers = (team, role) => {
+    return scores.filter((player) => {
+      const analysis = analyzePlayer(player);
+      if (!analysis) {
+        return;
+      }
+
+      return (team === 'axis' && analysis.percentageAxis > 0) || (team === 'allies' && analysis.percentageAxis < 1);
+    })
+  }
 
   return (
     <div
@@ -60,6 +84,18 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
             transform: "translateX(-50%) rotate(45deg)",
           }}
         />
+        <div
+          style={{
+            position: "absolute",
+            bottom: -64,
+            height: 60,
+            left: "50%",
+            width: 1,
+            background: "currentColor",
+            display: "inline-block",
+            transform: "translateX(-50%)",
+          }}
+        />
       </div>
 
       <div
@@ -88,6 +124,7 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
                 width: (axisKills.artillery / totalAxisKills) * 100 + "%",
                 background: artilleryColor,
               }}
+              onClick={() => setPlayersFilter(new iList(scores.filter(player => Object.keys(player.weapons).filter(not(isUnreliableKillAttribution)).filter(isAxisWeapon).some(isArtilleryWeapon)).map(player => player.player)))}
             >
               Artillery ({axisKills.artillery})
             </div>
@@ -96,6 +133,7 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
                 width: (axisKills.tank / totalAxisKills) * 100 + "%",
                 background: tanksColor,
               }}
+              onClick={() => setPlayersFilter(new iList(scores.filter(player => Object.keys(player.weapons).filter(not(isUnreliableKillAttribution)).filter(isAxisWeapon).some(isTankWeapon)).map(player => player.player)))}
             >
               Tanks ({axisKills.tank})
             </div>
@@ -104,12 +142,15 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
                 width: (axisKills.infantry / totalAxisKills) * 100 + "%",
                 background: axisInfantryColor,
               }}
+              onClick={() => setPlayersFilter(new iList(scores.filter(player => Object.keys(player.weapons).filter(not(isUnreliableKillAttribution)).filter(isAxisWeapon).filter(not(isArtilleryWeapon)).some(not(isTankWeapon))).map(player => player.player)))}
             >
               Infantry ({axisKills.infantry})
             </div>
           </div>
-          <div>
-            Axis ({totalAxisKills} /{" "}
+          <div
+            onClick={() => setPlayersFilter(new iList(scores.filter(player => Object.keys(player.weapons).filter(not(isUnreliableKillAttribution)).some(isAxisWeapon)).map(player => player.player)))}
+          >
+            <GermanyIcon /> Axis ({totalAxisKills} kills /{" "}
             {(totalAxisKills / totalAlliesKills).toFixed(2)} KD /{" "}
             {differencePercentage(axisDifference)})
           </div>
@@ -132,6 +173,7 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
                 width: (alliesKills.infantry / totalAlliesKills) * 100 + "%",
                 background: alliesInfantryColor,
               }}
+              onClick={() => setPlayersFilter(new iList(scores.filter(player => Object.keys(player.weapons).filter(not(isUnreliableKillAttribution)).filter(not(isAxisWeapon)).filter(not(isArtilleryWeapon)).some(not(isTankWeapon))).map(player => player.player)))}
             >
               Infantry ({alliesKills.infantry})
             </div>
@@ -140,6 +182,7 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
                 width: (alliesKills.tank / totalAlliesKills) * 100 + "%",
                 background: tanksColor,
               }}
+              onClick={() => setPlayersFilter(new iList(scores.filter(player => Object.keys(player.weapons).filter(not(isUnreliableKillAttribution)).filter(not(isAxisWeapon)).some(isTankWeapon)).map(player => player.player)))}
             >
               Tanks ({alliesKills.tank})
             </div>
@@ -148,12 +191,15 @@ const BalanceBar = ({ axisKills, alliesKills }) => {
                 width: (alliesKills.artillery / totalAlliesKills) * 100 + "%",
                 background: artilleryColor,
               }}
+              onClick={() => setPlayersFilter(new iList(scores.filter(player => Object.keys(player.weapons).filter(not(isUnreliableKillAttribution)).filter(not(isAxisWeapon)).some(isArtilleryWeapon)).map(player => player.player)))}
             >
               Artillery ({alliesKills.artillery})
             </div>
           </div>
-          <div>
-            Allies ({totalAlliesKills} /{" "}
+          <div
+            onClick={() => setPlayersFilter(new iList(scores.filter(player => Object.keys(player.weapons).filter(not(isUnreliableKillAttribution)).some(not(isAxisWeapon))).map(player => player.player)))}
+          >
+            <UnitedStatesIcon /> Allies ({totalAlliesKills} kills /{" "}
             {(totalAlliesKills / totalAxisKills).toFixed(2)} KD /{" "}
             {differencePercentage(alliesDifference)})
           </div>

@@ -25,6 +25,15 @@ export const isAxisWeapon = (id: WeaponId) => {
     !weapon.isUnreliableKillAttribution
   );
 };
+const weaponInfo = (weapon) => weapons.find((item) => item.name === weapon);
+export const isUnreliableKillAttribution = (weapon) =>
+  weaponInfo(weapon)?.isUnreliableKillAttribution || weaponInfo(weapon)?.team === Team.Unknown;
+export const isArtilleryWeapon = (weapon) =>
+  weaponInfo(weapon)?.type === WeaponType.Artillery;
+export const isTankWeapon = (weapon) => weaponInfo(weapon)?.type === WeaponType.Tank;
+export const isGermanWeapon = (weapon) => weaponInfo(weapon)?.team === Team.Germany;
+export const not = (func) => (value) => !func(value);
+
 export const analyzeWeapons = (weapons: WeaponKills) => {
   const totalKills = Object.values(weapons).reduce(
     (sum, count) => sum + count,
@@ -87,8 +96,6 @@ const analyzePlayer = (player: Player) => {
     certainty: 0,
     hasSwitchedTeams: false,
   };
-
-  return null;
 };
 
 export default analyzePlayer;

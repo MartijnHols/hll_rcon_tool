@@ -28,7 +28,7 @@ import { Button } from "@material-ui/core";
 import { toPairs, sortBy } from "lodash";
 import BalanceBar from "./BalanceBar";
 import weapons from "./weapons";
-import analyzePlayer from "./analysis/analyzePlayer";
+import analyzePlayer, {isArtilleryWeapon, isGermanWeapon, isTankWeapon, isUnreliableKillAttribution, not} from "./analysis/analyzePlayer";
 import { Team, WeaponType } from "./weapons/schema";
 
 export const safeGetSteamProfile = (scoreObj) =>
@@ -380,15 +380,6 @@ function commaSeperatedListRenderer(value) {
     .join(", ");
 }
 
-const weaponInfo = (weapon) => weapons.find((item) => item.name === weapon);
-const isUnreliableKillAttribution = (weapon) =>
-  weaponInfo(weapon)?.isUnreliableKillAttribution || weaponInfo(weapon)?.team === Team.Unknown;
-const isArtilleryWeapon = (weapon) =>
-  weaponInfo(weapon)?.type === WeaponType.Artillery;
-const isTankWeapon = (weapon) => weaponInfo(weapon)?.type === WeaponType.Tank;
-const isGermanWeapon = (weapon) => weaponInfo(weapon)?.team === Team.Germany;
-const not = (func) => (value) => !func(value);
-
 const reportWeapons = (player) => {
   console.log("weapons", {
     kills: {
@@ -427,7 +418,9 @@ const Scores = pure(({ classes, scores, durationToHour, type }) => {
 
   const debug = {};
 
-  scores?.toJS().forEach((player) => {
+  const jsScores = scores?.toJS();
+
+  jsScores.forEach((player) => {
     const analysis = analyzePlayer(player);
     debug[player.player] = analysis;
     if (!analysis) {
@@ -555,7 +548,7 @@ const Scores = pure(({ classes, scores, durationToHour, type }) => {
         <PlayerStatProfile playerScore={highlight} onClose={undoHighlight} />
       )}
 
-      <BalanceBar axisKills={totalKillsAxis} alliesKills={totalKillsAllies} />
+      <BalanceBar axisKills={totalKillsAxis} alliesKills={totalKillsAllies} scores={jsScores} setPlayersFilter={setPlayersFilter} />
 
       {scores && scores.size ? (
         <React.Fragment>
@@ -578,6 +571,7 @@ const Scores = pure(({ classes, scores, durationToHour, type }) => {
                   <Autocomplete
                     multiple
                     onChange={(e, val) => setPlayersFilter(new iList(val))}
+                    value={playersFilter.toJS()}
                     options={scores
                       .toJS()
                       .map(
