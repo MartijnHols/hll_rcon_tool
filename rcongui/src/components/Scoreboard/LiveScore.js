@@ -210,7 +210,7 @@ const LiveScore = ({ classes, endpoint, explainText, title }) => {
           );
           return map_;
         });
-        setRefreshIntervalSec(map_.get("refresh_interval_sec", 10));
+        setRefreshIntervalSec(10);
         // TODO add code to sync the refresh time with one of the server by checking the last refresh timestamp
       })
       .catch(handle_http_errors);
